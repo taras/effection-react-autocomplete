@@ -1,34 +1,23 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useAutocomplete } from "./hooks/useAutocomplete";
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  const [items, trigger] = useAutocomplete();
+
+  console.log({ items, trigger })
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="container">
+      <div className="flex items-center">
+        <input className="border rounded-sm" onChange={(e) => {
+          console.log({ value: e.target.value })
+          trigger(e.target.value)
+        }}/>
+        <ul className="">
+          {items.map((item) => <li key={item.name}>{item.name}</li>)}
+        </ul>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
