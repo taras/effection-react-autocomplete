@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { useEffect, useState } from "react";
-import { run, useAbortSignal, call, each } from "effection";
+import { run, useAbortSignal, call, each, suspend } from "effection";
 import { useAutocompleteOperation } from "../operations/autocomplete";
 
 type PersonInfo = {
@@ -47,6 +47,8 @@ export function useAutocomplete() {
         set([value, trigger]);
         yield* each.next();
       }
+
+      yield* suspend();
     });
 
     return () => {

@@ -3,7 +3,6 @@ import {
   createChannel,
   createSignal,
   each,
-  race,
   resource,
   sleep,
   spawn,
@@ -27,21 +26,26 @@ export function useAutocompleteOperation<TResult>(
     yield* spawn(function* () {
       let current = yield* spawn(() => suspend()); // start with a placeholder
 
-      for (const value of yield* each(values)) {
-        // stop the current task;
-        yield* current.halt();
+      try {
+        for (const value of yield* each(values)) {
+          // stop the current task;
+          yield* current.halt();
 
-        console.log("running loop")
+          console.log("running loop")
 
-        current = yield* spawn(function* () {
-          yield* sleep(250);
+          current = yield* spawn(function* () {
+            yield* sleep(250);
 
-          const result = yield* getResult(value);
+            const result = yield* getResult(value);
 
-          yield* results.send(result);
-        });
-        yield* each.next();
+            yield* results.send(result);
+          });
+          yield* each.next();
+        }        
+      } finally {
+        console.log('exited');
       }
+
     });
 
     yield* provide([results, values.send]);
