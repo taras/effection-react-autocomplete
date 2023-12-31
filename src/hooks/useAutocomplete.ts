@@ -1,7 +1,7 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import { useEffect, useState } from "react";
-import { run, useAbortSignal, call, each, suspend } from "effection";
-import { useAutocompleteOperation } from "../operations/autocomplete";
+q/* eslint-disable react-hooks/rules-of-hooks */
+import { useMemo, useState } from "react";
+import { useAbortSignal, call, each, createSignal, spawn, Operation, sleep } from "effection";
+import { useTask } from "./useTask";
 
 type PersonInfo = {
   name: string;
@@ -10,51 +10,43 @@ type PersonInfo = {
   skin_color: string;
 };
 
-const noop = () => { };
-
 export function useAutocomplete() {
-  const [autocomplete, set] = useState<[PersonInfo[], (keyword: string) => void]>([
-    [],
-    noop,
-  ]);
+  const values = useMemo(() => createSignal<string>(), []);
+  const [results, setResults] = useState<PersonInfo[]>([]);
+ 
+  useTask(function* () {
+    let current = yield* spawn(function*() {});
 
-  useEffect(() => {
-    const task = run(function* () {
-      console.log("started task");
-      const [results, trigger] = yield* useAutocompleteOperation<PersonInfo[]>(
-        function* getResults(keyword) {
-          console.log({ keyword })
-          const signal = yield* useAbortSignal();
+    for (const value of yield* each(values)) {
+      yield* current.halt();
+      current = yield* spawn(function*() {
+	yield* sleep(250);
+	let results = yield* getResults(value);
+	setResults(results);
+      });
+      yield* each.next();
+    }
 
-          const response = yield* call(
-            fetch(`https://swapi.py4e.com/api/people/?search=${keyword}`, {
-              signal,
-            })
-          );
+}, [setResults, values]);
 
-          if (response.ok) {
-            return yield* call(response.json());
-          } else {
-            throw new Error(`${response.statusText}`);
-          }
-        }
-      );
-      console.log({ results, trigger })
+  return [results, values.send];
+}
 
-      for (const value of yield* each(results)) {
-        // handle updates
-        console.log("update", { value })
-        set([value, trigger]);
-        yield* each.next();
-      }
+function* getResults(keyword: string): Operation<PersonInfo[]> {
+  console.log({ keyword })
+  const signal = yield* useAbortSignal();
 
-      yield* suspend();
-    });
+  const response = yield* call(
+    fetch(`https://swapi.py4e.com/api/people/?search=${keyword}`, {
+      signal,
+    })
+  );
 
-    return () => {
-      run(() => task.halt());
-    };
-  }, [set]);
-
-  return autocomplete;
+  const result = yield* call(response.json());
+  
+  if (response.ok) {
+    return result.results;
+  } else {
+    throw new Error(`${response.statusText}`);
+  }
 }
