@@ -1,52 +1,40 @@
-q/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useMemo, useState } from "react";
-import { useAbortSignal, call, each, createSignal, spawn, Operation, sleep } from "effection";
+import {
+  each,
+  createSignal,
+  spawn,
+  Operation,
+  sleep,
+} from "effection";
 import { useTask } from "./useTask";
 
-type PersonInfo = {
-  name: string;
-  gender: string;
-  hair_color: string;
-  skin_color: string;
-};
-
-export function useAutocomplete() {
+export function useAutocomplete<T>({
+  getResults,
+}: {
+  getResults: (keyword: string) => Operation<T>;
+}) {
   const values = useMemo(() => createSignal<string>(), []);
-  const [results, setResults] = useState<PersonInfo[]>([]);
- 
-  useTask(function* () {
-    let current = yield* spawn(function*() {});
+  const [results, setResults] = useState<T>();
 
-    for (const value of yield* each(values)) {
-      yield* current.halt();
-      current = yield* spawn(function*() {
-	yield* sleep(250);
-	let results = yield* getResults(value);
-	setResults(results);
-      });
-      yield* each.next();
-    }
+  useTask(
+    function* () {
+      let current;
 
-}, [setResults, values]);
-
-  return [results, values.send];
-}
-
-function* getResults(keyword: string): Operation<PersonInfo[]> {
-  console.log({ keyword })
-  const signal = yield* useAbortSignal();
-
-  const response = yield* call(
-    fetch(`https://swapi.py4e.com/api/people/?search=${keyword}`, {
-      signal,
-    })
+      for (const value of yield* each(values)) {
+        if (current) {
+          yield* current.halt();
+        }
+        current = yield* spawn(function* () {
+          yield* sleep(250);
+          const results = yield* getResults(value);
+          setResults(results);
+        });
+        yield* each.next();
+      }
+    },
+    [setResults, values]
   );
 
-  const result = yield* call(response.json());
-  
-  if (response.ok) {
-    return result.results;
-  } else {
-    throw new Error(`${response.statusText}`);
-  }
+  return [results, values.send] as const;
 }
