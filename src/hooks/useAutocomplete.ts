@@ -16,6 +16,8 @@ export function useAutocomplete<T>({
 }) {
   const values = useMemo(() => createSignal<string>(), []);
   const [results, setResults] = useState<T>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null); 
 
   useTask(
     function* () {
@@ -27,14 +29,26 @@ export function useAutocomplete<T>({
         }
         current = yield* spawn(function* () {
           yield* sleep(250);
-          const results = yield* getResults(value);
-          setResults(results);
+          setError(null);
+          setLoading(true);
+          try {
+            const results = yield* getResults(value);
+            setResults(results);
+          } catch (e) {
+            if (e instanceof Error) {
+              setError(e)
+            } else {
+              setError(new Error(`${e}`))
+            }
+          } finally {
+            setLoading(false);
+          }
         });
         yield* each.next();
       }
     },
-    [setResults, values]
+    [setResults, values, setLoading]
   );
 
-  return [results, values.send] as const;
+  return [results, values.send, { loading, error }] as const;
 }

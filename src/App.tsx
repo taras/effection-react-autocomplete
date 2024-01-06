@@ -13,7 +13,7 @@ function* getResults(keyword: string): Operation<PersonInfo[]> {
   const signal = yield* useAbortSignal();
 
   const response = yield* call(
-    fetch(`https://swapi.py4e.com/api/people/?search=${keyword}`, {
+    fetch(`https://swapi-proxy.deno.dev/api/people/?search=${keyword}&delay=1000&status=500`, {
       signal,
     })
   );
@@ -29,7 +29,7 @@ function* getResults(keyword: string): Operation<PersonInfo[]> {
 
 function App() {
 
-  const [results, search] = useAutocomplete<PersonInfo[]>({
+  const [results, search, { loading, error }] = useAutocomplete<PersonInfo[]>({
     getResults,
   });
 
@@ -39,6 +39,8 @@ function App() {
         <input className="border rounded-sm" onChange={(e) => {
           search(e.target.value)
         }}/>
+        {loading ? "Loading..." : null}
+        {error ? `${error}` : null}
         <ul>
           {results && results.map((item) => <li key={item.name}>{item.name}</li>)}
         </ul>

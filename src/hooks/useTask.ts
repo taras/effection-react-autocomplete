@@ -8,5 +8,5 @@ export function useTask(operation: () => Operation<unknown>, deps?: DependencyLi
     return () => {
       run(() => task.halt());
     };
-  }, deps)
+  }, deps);
 }
